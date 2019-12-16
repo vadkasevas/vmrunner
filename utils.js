@@ -23,7 +23,16 @@ const functionFromScript = function(expr,vmCtx){
     }
     let key = md5( expr+':'+vm2OptionsHash  );
     if(!fbCache.has(key)) {
-        const tokens = esprima.parseScript(expr,{tolerant:true});
+        let tokens = null;
+        try{
+            tokens = esprima.parseScript(expr,{tolerant:true});
+        }catch (e) {
+            tokens = esprima.parseScript(`
+                (function anonymous(){
+                    ${expr}
+                }).apply( this );
+            `,{tolerant:true})
+        }
         let lastIndex = 0;
         _.each(tokens.body,(statement,index)=>{
             if( statement.type!='EmptyStatement' ){
@@ -32,7 +41,7 @@ const functionFromScript = function(expr,vmCtx){
         });
         let lastExpression = tokens.body[lastIndex];
         if(lastExpression) {
-            if(lastExpression.type!='ReturnStatement') {
+            if(['IfStatement','ReturnStatement'].indexOf(lastExpression.type) == -1 ){
                 tokens.body[tokens.body.length - 1] = {
                     type: 'ReturnStatement',
                     argument: lastExpression,

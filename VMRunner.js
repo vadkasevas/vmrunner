@@ -2,6 +2,8 @@ import {wrapScope, functionFromScript, getScript, convertResult, generateRandomH
 import MalibunCache from "./MalibunCache";
 import _ from 'underscore';
 import VMRunnerContext from "./VMRunnerContext";
+import EventEmitter from 'events';
+console.log({EventEmitter});
 /**
  * @property {object} global
  * @property {boolean} throw
@@ -9,9 +11,10 @@ import VMRunnerContext from "./VMRunnerContext";
  * @property {UsersModel} user
  * */
 
-class VMRunner{
+class VMRunner extends EventEmitter{
     /**@param {VMRunnerContext} scopeCtx*/
     constructor(scopeCtx){
+        super();
         this.withThrow(false)
             .withConvertResult(true)
             .withScopeCtx(scopeCtx||VMRunner.defaultCtx);
@@ -48,9 +51,9 @@ class VMRunner{
         return this.scopeCtx.getScope(this);
     }
 
-    async run(expr,context){
+    async run(expression,context){
         context = context || {};
-        if(!expr&&_.isEmpty(expr))
+        if(!expression&&_.isEmpty(expression))
             return undefined;
         const contextCopy = Object.assign({},context);
         const scope = this.scope;
@@ -86,28 +89,63 @@ class VMRunner{
                 return name in contextCopy;
             }
         });
-        let f = functionFromScript(expr,scope.vm);
+        let result = undefined;
+        let f = null;
+        try {
+            f = functionFromScript(expression,scope.vm);
+        }catch (e) {
+            if(this.listenerCount('error')>0){
+                this.emit('error',e,{
+                    expression,
+                    context,
+                    scope:scope.vm,
+                    scopeOriginal:scope.original
+                })
+            }
+            if(this.throw){
+                throw e;
+            }
+            return result;
+        }
         if(!f)
             return undefined;
-        //f = _.bind(f,proxy);
-        //VMRunner2.currentFunction = f;
-        //const script = getScript(`VMRunner2.currentFunction.apply();`);
-        let result;
         try{
-            //result = this.probePromise( script.runInContext(scope.vm) );
             result = await f.apply(proxy);
         }catch(e){
-            console.error(e);
-            result = undefined;
+            if(this.listenerCount('error')>0){
+                this.emit('error',e,{
+                    expression,
+                    context,
+                    scope:scope.vm,
+                    scopeOriginal:scope.original
+                })
+            }
             if(this.throw){
                 throw e;
             }
             return result;
         }
         if(this.convertResult)
-            return await this.doConvertResult(result);
-        else
+            result = await this.doConvertResult(result);
+            if(this.listenerCount('result')>0){
+                this.emit('result',result,{
+                    expression,
+                    context,
+                    scope:scope.vm,
+                    scopeOriginal:scope.original
+                });
+            }
+        else {
+            if(this.listenerCount('result')>0){
+                this.emit('result',result,{
+                    expression,
+                    context,
+                    scope:scope.vm,
+                    scopeOriginal:scope.original
+                });
+            }
             return result;
+        }
     }
 }
 

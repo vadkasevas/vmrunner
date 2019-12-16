@@ -2,11 +2,13 @@
 
   "presets": ["@babel/preset-env"],
   "plugins": [
+    "@babel/plugin-transform-runtime",
+    ["@babel/plugin-syntax-dynamic-import"],
     ["@babel/plugin-proposal-optional-chaining"],
-    ["@babel/plugin-transform-runtime",
-      {
-        "regenerator": true
-      }
-    ]
-  ]
+    ["transform-es2015-modules-commonjs-simple", {
+      "noMangle": true
+    }]
+  ],
+  "sourceMaps": "inline",
+  "retainLines": true
 }
