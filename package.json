@@ -2,9 +2,10 @@
   "name": "vmrunner",
   "version": "0.0.1",
   "description": "vmrunner",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "test": "mocha --require @babel/register --timeout 50000 --recursive"
+    "test": "mocha --require @babel/register --timeout 50000 --recursive",
+    "build": "babel src --out-dir lib"
   },
   "keywords": [
     "vm"

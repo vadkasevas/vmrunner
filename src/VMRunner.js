@@ -3,7 +3,6 @@ import MalibunCache from "./MalibunCache";
 import _ from 'underscore';
 import VMRunnerContext from "./VMRunnerContext";
 import EventEmitter from 'events';
-console.log({EventEmitter});
 /**
  * @property {object} global
  * @property {boolean} throw

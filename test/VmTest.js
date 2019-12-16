@@ -17,7 +17,7 @@ const itAsync = function(name,handler){
 };
 import should from 'should';
 
-import {VMRunner,VMRunnerContext} from './../index';
+import {VMRunner,VMRunnerContext} from '../lib';
 
 describe('VMRunner', ()=>{
 
@@ -110,7 +110,10 @@ describe('VMRunner', ()=>{
         `,{}).should.be.fulfilledWith('true') );
 
         return Promise.all(promises);
-    })
+    });
+
+
+
 
 
 });

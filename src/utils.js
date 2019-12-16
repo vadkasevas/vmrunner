@@ -48,7 +48,7 @@ const functionFromScript = function(expr,vmCtx){
                 };
             }
             let functionBody = escodegen.generate(tokens);
-            console.log(functionBody);
+            //console.log(functionBody);
 
 
             vmCtx.vm2Options.functionBody = functionBody;
@@ -79,7 +79,7 @@ function wrapScope(scope,runner,vm2Options){
                     return target[property];
                 },
                 set: function (target, key, value, receiver) {
-                    console.log('set key:',key,'value:',value);
+                    //console.log('set key:',key,'value:',value);
                 },
                 getOwnPropertyDescriptor(target, name){
                     return Object.getOwnPropertyDescriptor(target, name);
