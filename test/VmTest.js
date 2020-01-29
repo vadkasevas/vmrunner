@@ -1,3 +1,6 @@
+import should from 'should';
+import {VMRunner,VMRunnerContext} from '../lib';
+
 const describe = require('mocha').describe;
 const before = require('mocha').before;
 const it = require('mocha').it;
@@ -15,9 +18,6 @@ const itAsync = function(name,handler){
         }).apply(this);
     });
 };
-import should from 'should';
-
-import {VMRunner,VMRunnerContext} from '../lib';
 
 describe('VMRunner', ()=>{
 
@@ -110,6 +110,23 @@ describe('VMRunner', ()=>{
         `,{}).should.be.fulfilledWith('true') );
 
         return Promise.all(promises);
+    });
+
+    it('Валидация кода',()=>{
+        let promises = [];
+        let context = new VMRunnerContext()
+        .withScopeObj({
+            setTimeout:setTimeout,
+            Promise:Promise
+        });
+        let runner = new VMRunner(context).withThrow(true);
+        let validCode = `return 'This is valid js code';`;
+        let valid = runner.validate(validCode)
+        should(valid).be.true(`Неверная валидация ${validCode}`);
+
+        let invalidCode = `return 'This is NOT valid js code;`;
+        should( ()=>{ runner.validate(invalidCode); } ).throw(Error);
+
     });
 
 

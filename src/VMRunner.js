@@ -50,6 +50,12 @@ class VMRunner extends EventEmitter{
         return this.scopeCtx.getScope(this);
     }
 
+    validate(expression){
+        const scope = this.scope;
+        let f = functionFromScript(expression,scope.vm);
+        return true;
+    }
+
     async run(expression,context){
         context = context || {};
         if(!expression&&_.isEmpty(expression))
