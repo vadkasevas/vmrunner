@@ -14,18 +14,27 @@ export default class VMRunnerContext{
 
     /**@returns {this}*/
     withScopeObj(scope){
-        this.scopeObj = scope;
+        if(scope!==this.scopeObj){
+            this.scopeCache.clear();
+            this.scopeObj = scope;
+        }
         return this;
     }
 
     /**@returns {this}*/
     withWrapScope(wrap=true){
+        if(this.wrapScope!==wrap){
+            this.scopeCache.clear();
+        }
         this.wrapScope=wrap;
         return this;
     }
 
     /**@returns {this}*/
     withScopeCacheTtl(scopeCacheTtl){
+        if(this.scopeCacheTtl!==scopeCacheTtl){
+            this.scopeCache.clear();
+        }
         this.scopeCacheTtl = scopeCacheTtl;
         return this;
     }
@@ -66,11 +75,18 @@ export default class VMRunnerContext{
                 return this.scopeCache.get(this.scopeObj[HASH_KEY]);
             }else
                 return this.doWrapScope(this.scopeObj,runner);
-        }
-        let vmContext = vm.createContext( this.scopeObj );
-        return {
-            vm:vmContext,
-            original:this.scopeObj
+        }else{
+             if(!this.scopeCache.has(HASH_KEY)){
+                 let vmContext = vm.createContext( this.scopeObj );
+                 let scope = {
+                     vm:vmContext,
+                     original:this.scopeObj
+                 };
+                 if(this.scopeCacheTtl>0)
+                    this.scopeCache.set(HASH_KEY,scope,this.scopeCacheTtl);
+                 return scope;
+             }
+             return this.scopeCache.get(HASH_KEY);
         }
 
     }
