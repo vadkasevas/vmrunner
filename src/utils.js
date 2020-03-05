@@ -27,11 +27,7 @@ const functionFromScript = function(expr,vmCtx){
         try{
             tokens = esprima.parseScript(expr,{tolerant:true});
         }catch (e) {
-            tokens = esprima.parseScript(`
-                (function anonymous(){
-                    ${expr}
-                }).apply( this );
-            `,{tolerant:true})
+            tokens = esprima.parseScript(`(function anonymous(){ ${expr} }).apply( this );`,{tolerant:true})
         }
         let lastIndex = 0;
         _.each(tokens.body,(statement,index)=>{

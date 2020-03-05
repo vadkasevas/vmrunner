@@ -48,6 +48,14 @@ describe('VMRunner', ()=>{
         should(result).equals(1,'Должны поддерживаться все возможности es6');
     });
 
+    itAsync('Переменные локального контекста доступны в коде',async ()=>{
+        let context = new VMRunnerContext()
+        .withScopeObj({});
+        let runner = new VMRunner(context);
+        let result = await runner.run(`return this.local;`,{local:1});
+        should(result).equals(1,'Неверный результат кода');
+    });
+
     itAsync('Переменные глобального контекста доступны в коде',async ()=>{
         let context = new VMRunnerContext()
             .withScopeObj({static:1})
@@ -63,6 +71,7 @@ describe('VMRunner', ()=>{
             .withWrapScope(true);
         let runner = new VMRunner(context);
         let result = await runner.run(`static=2; return static;`,{});
+        should(result).equals(2,'Результат выполнения должен быть верным');
         should(context.scopeObj.static).equals(1,'Глобальный контекст изменился');
     });
 
