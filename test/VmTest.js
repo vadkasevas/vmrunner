@@ -122,7 +122,6 @@ describe('VMRunner', ()=>{
     });
 
     it('Валидация кода',()=>{
-        let promises = [];
         let context = new VMRunnerContext()
         .withScopeObj({
             setTimeout:setTimeout,
@@ -138,6 +137,17 @@ describe('VMRunner', ()=>{
 
     });
 
+    itAsync('Raw object',async ()=>{
+        let context = new VMRunnerContext()
+        .withScopeObj({});
+        let runner = new VMRunner(context).withThrow(true);
+        let result = await runner.run(`{}`);
+        should(result).eql({},'Неверный результат кода');
+        result = await runner.run(`{a:1,b:2,c:3}`);
+        should(result).eql({a:1,b:2,c:3},'Неверный результат кода');
+        result = await runner.run(`return {a:1,b:2,c:3}`);
+        should(result).eql({a:1,b:2,c:3},'Неверный результат кода');
+    });
 
 
 

@@ -7,9 +7,12 @@ import vm from 'vm';
 const esprima = require('esprima');
 const escodegen = require('escodegen');
 import MalibunCache from "./MalibunCache";
+import cachedRegExp from './cachedRegExp';
+
 const fbCache = new MalibunCache();
 const functionGenerator = new vm.Script( `new Function( vm2Options.functionBody );` );
 const scriptCache = new MalibunCache();
+const re = cachedRegExp(/^([\s\t\n\r]*return[\s\t\n\r]*)?(\{[\s\S]*\})([\s\t\n\r;]?$)/);
 
 function generateRandomHash() {
     return md5(_.random(100000000) + '_' + _.random(100000000) + '_' + Date.now());
@@ -22,6 +25,17 @@ const functionFromScript = function(expr,vmCtx){
         vm2OptionsHash = generateRandomHash();
     }
     let key = md5( expr+':'+vm2OptionsHash  );
+    if(re.test(expr)){
+        re.lastIndex = 0;
+        expr = expr.replace(re,(m,prefix,body,suffix)=>{
+            if(prefix===undefined)
+                prefix = '';
+            if(suffix===undefined)
+                suffix = '';
+            return `${prefix} new Object(${body})${suffix}`;
+        });
+    }
+
     if(!fbCache.has(key)) {
         let tokens = null;
         try{
