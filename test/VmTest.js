@@ -149,7 +149,25 @@ describe('VMRunner', ()=>{
         should(result).eql({a:1,b:2,c:3},'Неверный результат кода');
     });
 
-
+    itAsync('Декораторы должны поддерживаться',async ()=>{
+        let context = new VMRunnerContext()
+        .withScopeObj({});
+        let runner = new VMRunner(context).withThrow(true);
+        let result = await runner.run(`
+        //import fs from 'fs';
+        function decorator(){
+            return fs;
+        }
+        class Test{
+            //@decorator()
+            method(){
+            
+            }
+        }
+        return 1;
+        `);
+        should(result).equals(1,'Неверный результат кода с декораторами');
+    });
 
 
 });
