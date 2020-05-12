@@ -60,8 +60,9 @@ class VMRunner extends EventEmitter{
         context = context || {};
         if(!expression&&_.isEmpty(expression))
             return undefined;
-        const contextCopy = Object.assign({},context);
+        //const contextCopy = Object.assign({},context);
         const scope = this.scope;
+        /*
         const proxy =  new Proxy(context,{
             get: function(target, property) {
                 //console.log('proxy get:',property);
@@ -94,6 +95,8 @@ class VMRunner extends EventEmitter{
                 return name in contextCopy;
             }
         });
+
+         */
         let result = undefined;
         let f = null;
         try {
@@ -115,7 +118,7 @@ class VMRunner extends EventEmitter{
         if(!f)
             return undefined;
         try{
-            result = await f.apply(proxy);
+            result = await f.apply(context);
         }catch(e){
             if(this.listenerCount('error')>0){
                 this.emit('error',e,{
