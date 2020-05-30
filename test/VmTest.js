@@ -4,6 +4,8 @@ import {VMRunner,VMRunnerContext} from '../lib';
 const describe = require('mocha').describe;
 const before = require('mocha').before;
 const it = require('mocha').it;
+const babelCore = require("@babel/core")
+const babelParser = require("@babel/parser");
 
 const itAsync = function(name,handler){
     it(name,function(done){
@@ -167,6 +169,33 @@ describe('VMRunner', ()=>{
         return 1;
         `);
         should(result).equals(1,'Неверный результат кода с декораторами');
+    });
+
+    it('Проверка трансипляции Babel',()=>{
+        var expr = `let BaseMenuContext = this.BaseMenuContext;`;
+        let tokens = babelParser.parse(expr, {
+            sourceType: "script",
+            plugins: [
+                ['decorators', { decoratorsBeforeExport: false }]
+            ],
+            allowReturnOutsideFunction:true,
+        });
+
+        const { code, map, ast } = babelCore.transformFromAstSync(tokens, expr, {
+            "presets": [["@babel/preset-env",{targets:{node:true,esmodules:false}}]],
+            "plugins": [
+                "@babel/plugin-transform-runtime",
+                ["@babel/plugin-syntax-dynamic-import"],
+                ["@babel/plugin-proposal-optional-chaining"],
+                ["@babel/plugin-proposal-decorators", {"legacy": true}],
+                /*["transform-es2015-modules-commonjs-simple", {
+                    "noMangle": true
+                }]*/
+            ],
+            "sourceMaps": false,
+            "retainLines": true
+        });
+        code.should.be.eql('let BaseMenuContext = this.BaseMenuContext;');
     });
 
 

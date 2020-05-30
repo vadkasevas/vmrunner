@@ -106,6 +106,8 @@ const functionFromScript = function(expr,vmCtx){
                 }*/
 
                 const { code, map, ast } = babelCore.transformFromAstSync(tokens, expr, {
+                    babelrc: false,
+                    configFile: false,
                     "presets": [["@babel/preset-env",{targets:{node:true,esmodules:false}}]],
                     "plugins": [
                         "@babel/plugin-transform-runtime",
