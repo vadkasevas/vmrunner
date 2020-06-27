@@ -56,7 +56,7 @@ class VMRunner extends EventEmitter{
         return true;
     }
 
-    async run(expression,context){
+    async run(expression,context,options={}){
         context = context || {};
         if(!expression&&_.isEmpty(expression))
             return undefined;
@@ -100,7 +100,7 @@ class VMRunner extends EventEmitter{
         let result = undefined;
         let f = null;
         try {
-            f = functionFromScript(expression,scope.vm);
+            f = functionFromScript(expression,scope.vm,options);
         }catch (e) {
             if(this.listenerCount('error')>0){
                 this.emit('error',e,{

@@ -16,17 +16,21 @@ const re = cachedRegExp(/^([\s\t\n\r]*return[\s\t\n\r]*)?(\{[\s\S]*\})([\s\t\n\r
 const babelParser = require("@babel/parser");
 import babelGenerate from '@babel/generator';
 const babelCore = require("@babel/core")
-
+import vmBabelPlugin from './babel-plugin';
+import returnLastBabelPlugin from './return-last-babel-plugin';
 function generateRandomHash() {
     return md5(_.random(100000000) + '_' + _.random(100000000) + '_' + Date.now());
 }
 
-const functionFromScript = function(expr,vmCtx){
+const functionFromScript = function(expr,vmCtx,options={}){
     vmCtx.vm2Options = vmCtx.vm2Options || {};
     let vm2OptionsHash = vmCtx.vm2Options.hash;
     if(!vm2OptionsHash){
         vm2OptionsHash = generateRandomHash();
     }
+
+    const useCache = !options['debugger'];
+
     let key = md5( expr+':'+vm2OptionsHash  );
     if(re.test(expr)){
         re.lastIndex = 0;
@@ -39,95 +43,37 @@ const functionFromScript = function(expr,vmCtx){
         });
     }
 
-    if(!fbCache.has(key)) {
-        let tokens = null;
-        let parserMode = 'esprima';
-        try{
-            tokens = esprima.parseScript(expr,{tolerant:true});
-        }catch (err1) {
-            try {
-                tokens = esprima.parseScript(`(function anonymous(){ ${expr} }).apply( this );`,{tolerant:true})
-            }catch (err2) {
-                try {
-                    parserMode = 'babel';
-                    tokens = babelParser.parse(expr, {
-                        sourceType: "script",
-                        plugins: [
-                            ['decorators', { decoratorsBeforeExport: false }]
-                        ],
-                        allowReturnOutsideFunction:true,
-                    });
-                }catch (err3) {
-                    throw err2;
-                }
-            }
-        }
-        if(parserMode=='esprima') {
-            let lastIndex = 0;
-            _.each (tokens.body, (statement, index) => {
-                if (statement.type != 'EmptyStatement') {
-                    lastIndex = index;
-                }
-            });
-            let lastExpression = tokens.body[lastIndex];
-            if (lastExpression) {
-                if (['IfStatement', 'ReturnStatement'].indexOf (lastExpression.type) == -1) {
-                    tokens.body[tokens.body.length - 1] = {
-                        type: 'ReturnStatement',
-                        argument: lastExpression,
-                    };
-                }
-                let functionBody = escodegen.generate (tokens);
-                //console.log(functionBody);
-                vmCtx.vm2Options.functionBody = functionBody;
-                let f = functionGenerator.runInContext (vmCtx);
-                //var f = new Function(functionBody);
-                fbCache.set (key, f, 5 * 60 * 1000);
-            }
-        }else{
-            let lastIndex = 0;
-            _.each (tokens.program.body, (statement, index) => {
-                if (statement.type != 'EmptyStatement') {
-                    lastIndex = index;
-                }
-            });
-            let lastExpression = tokens.program.body[lastIndex];
-            if (lastExpression) {
-                if(lastExpression.type!=='ReturnStatement'){
-                    throw new Error('Babel парсер ожидает return');
-                }
-                /*if (['IfStatement', 'ReturnStatement'].indexOf (lastExpression.type) == -1) {
-                    if(lastExpression.type==='ClassDeclaration')
-                        lastExpression.type='ClassExpression';
-                    tokens.program.body[tokens.program.body.length - 1] = {
-                        type: 'ReturnStatement',
-                        argument: lastExpression,
-                    };
-                }*/
+    if(!useCache||!fbCache.has(key)) {
+        let tokens = babelParser.parse(expr, {
+            sourceType: "script",
+            plugins: [
+                ['decorators', { decoratorsBeforeExport: false }]
+            ],
+            allowReturnOutsideFunction:true,
+        });
 
-                const { code, map, ast } = babelCore.transformFromAstSync(tokens, expr, {
-                    babelrc: false,
-                    configFile: false,
-                    "presets": [["@babel/preset-env",{targets:{node:true,esmodules:false}}]],
-                    "plugins": [
-                        "@babel/plugin-transform-runtime",
-                        ["@babel/plugin-syntax-dynamic-import"],
-                        ["@babel/plugin-proposal-optional-chaining"],
-                        ["@babel/plugin-proposal-decorators", {"legacy": true}],
-                        /*["transform-es2015-modules-commonjs-simple", {
-                            "noMangle": true
-                        }]*/
-                    ],
-                    "sourceMaps": false,
-                    "retainLines": true
-                });
-                //console.log(code);
-                vmCtx.vm2Options.functionBody = code;
-                let f = functionGenerator.runInContext (vmCtx);
-                //var f = new Function(functionBody);
-                fbCache.set (key, f, 5 * 60 * 1000);
-            }
-        }
+        const { code, map, ast } = babelCore.transformFromAstSync(tokens, expr, {
+            babelrc: false,
+            configFile: false,
+            "presets": [["@babel/preset-env",{targets:{node:true,esmodules:false}}]],
+            "plugins": [
+                [vmBabelPlugin],
+                [returnLastBabelPlugin],
+                "@babel/plugin-transform-runtime",
+                ["@babel/plugin-syntax-dynamic-import"],
+                ["@babel/plugin-proposal-optional-chaining"],
+                ["@babel/plugin-proposal-decorators", {"legacy": true}],
+            ],
+            "sourceMaps": false,
+            "retainLines": true
+        });
+        //console.log(code);
+        vmCtx.vm2Options.functionBody = code;
+        vmCtx.vm2Options.customOptions = options;
+        let f = functionGenerator.runInContext ( vmCtx );
+        fbCache.set (key, f, 5 * 60 * 1000);
+
+
     }
     return fbCache.get(key);
 };

@@ -1,5 +1,5 @@
 import should from 'should';
-import {VMRunner,VMRunnerContext} from '../lib';
+import {VMRunner,VMRunnerContext} from '../src';
 
 const describe = require('mocha').describe;
 const before = require('mocha').before;
