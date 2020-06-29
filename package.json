@@ -2,7 +2,7 @@
   "name": "vmrunner",
   "version": "0.0.1",
   "description": "vmrunner",
-  "main": "src/index.js",
+  "main": "lib/index.js",
   "jsnext:main": "src/index.js",
   "scripts": {
     "test": "mocha --require @babel/register --timeout 50000 --recursive",
