@@ -24,26 +24,25 @@ function generateRandomHash() {
 
 const functionFromScript = function(expr,vmCtx,options={}){
     vmCtx.vm2Options = vmCtx.vm2Options || {};
-    let vm2OptionsHash = vmCtx.vm2Options.hash;
-    if(!vm2OptionsHash){
-        vm2OptionsHash = generateRandomHash();
-    }
-
-    const useCache = !options['debugger'];
+    let vm2OptionsHash = md5(JSON.stringify(options));
+    vmCtx.vm2Options.customOptions = options;
+    const useCache = true;
 
     let key = md5( expr+':'+vm2OptionsHash  );
-    if(re.test(expr)){
-        re.lastIndex = 0;
-        expr = expr.replace(re,(m,prefix,body,suffix)=>{
-            if(prefix===undefined)
-                prefix = '';
-            if(suffix===undefined)
-                suffix = '';
-            return `${prefix} new Object(${body})${suffix}`;
-        });
-    }
+    vmCtx.vm2Options.VM_RUNNER_HASH = key;
 
     if(!useCache||!fbCache.has(key)) {
+        if(re.test(expr)){
+            re.lastIndex = 0;
+            expr = expr.replace(re,(m,prefix,body,suffix)=>{
+                if(prefix===undefined)
+                    prefix = '';
+                if(suffix===undefined)
+                    suffix = '';
+                return `${prefix} new Object(${body})${suffix}`;
+            });
+        }
+
         let tokens = babelParser.parse(expr, {
             sourceType: "script",
             plugins: [
@@ -53,12 +52,13 @@ const functionFromScript = function(expr,vmCtx,options={}){
         });
 
         const { code, map, ast } = babelCore.transformFromAstSync(tokens, expr, {
+            filename: options.filename||'vmrunner.js',
             babelrc: false,
             configFile: false,
             "presets": [["@babel/preset-env",{targets:{node:true,esmodules:false}}]],
             "plugins": [
                 [vmBabelPlugin],
-                [returnLastBabelPlugin],
+                [returnLastBabelPlugin,{ topLevel: true }],
                 "@babel/plugin-transform-runtime",
                 ["@babel/plugin-syntax-dynamic-import"],
                 ["@babel/plugin-proposal-optional-chaining"],
@@ -67,13 +67,10 @@ const functionFromScript = function(expr,vmCtx,options={}){
             "sourceMaps": false,
             "retainLines": true
         });
-        //console.log(code);
+        console.log(code);
         vmCtx.vm2Options.functionBody = code;
-        vmCtx.vm2Options.customOptions = options;
         let f = functionGenerator.runInContext ( vmCtx );
         fbCache.set (key, f, 5 * 60 * 1000);
-
-
     }
     return fbCache.get(key);
 };

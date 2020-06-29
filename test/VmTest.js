@@ -22,7 +22,7 @@ const itAsync = function(name,handler){
 };
 
 describe('VMRunner', ()=>{
-
+/*
     itAsync('Результат кода должен быть верным',async (done)=>{
 
         let context = new VMRunnerContext()
@@ -188,15 +188,58 @@ describe('VMRunner', ()=>{
                 ["@babel/plugin-syntax-dynamic-import"],
                 ["@babel/plugin-proposal-optional-chaining"],
                 ["@babel/plugin-proposal-decorators", {"legacy": true}],
-                /*["transform-es2015-modules-commonjs-simple", {
-                    "noMangle": true
-                }]*/
             ],
             "sourceMaps": false,
             "retainLines": true
         });
         code.should.be.eql('let BaseMenuContext = this.BaseMenuContext;');
     });
+
+*/
+    itAsync('Trace',async ()=>{
+        var expr = `
+            let n = 1;
+            let s = 'string'
+            trace:;
+            console.log('vm2Options:',JSON.stringify(vm2Options));
+            return { 
+                VM_RUNNER_RUN_ID,
+                VM_RUNNER_HASH
+            }
+        `
+        let context = new VMRunnerContext()
+        .withScopeObj({});
+        let runner = new VMRunner(context).withThrow(true);
+        let tracePrefix = null;
+        let traceData = null;
+        let obj1 = await runner.run(expr,{},{
+            trace:{
+                aliases:{
+                    trace(prefix,data){
+                        tracePrefix = prefix;
+                        traceData = data;
+                    }
+                }
+            }
+        });
+
+        let obj2 = await runner.run(expr,{},{
+            trace:{
+                aliases:{
+                    trace(prefix,data){
+                        tracePrefix = prefix;
+                        traceData = data;
+                    }
+                }
+            }
+        });
+
+        traceData.n.should.be.eql(1,'Неверный результат кода');
+        traceData.s.should.be.eql('string','Неверный результат кода');
+
+        obj1.VM_RUNNER_RUN_ID.should.not.be.eql(obj2.VM_RUNNER_RUN_ID,'VM_RUNNER_RUN_ID должен меняться при каждом вызове');
+        obj1.VM_RUNNER_HASH.should.be.eql(obj2.VM_RUNNER_HASH,'VM_RUNNER_HASH не должен меняться при каждом вызове');
+    })
 
 
 });

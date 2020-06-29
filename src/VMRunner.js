@@ -60,43 +60,7 @@ class VMRunner extends EventEmitter{
         context = context || {};
         if(!expression&&_.isEmpty(expression))
             return undefined;
-        //const contextCopy = Object.assign({},context);
         const scope = this.scope;
-        /*
-        const proxy =  new Proxy(context,{
-            get: function(target, property) {
-                //console.log('proxy get:',property);
-                if(contextCopy.hasOwnProperty(property))
-                    return contextCopy[property];
-                if(context.hasOwnProperty(property))
-                    return context[property];
-                if(scope.original.hasOwnProperty(property))
-                    return scope.original[property];
-            },
-            set: function (target, key, value, receiver) {
-                contextCopy[key]=value;
-            },
-            getOwnPropertyDescriptor(target, name){
-                return Object.getOwnPropertyDescriptor(contextCopy, name);
-            },
-            ownKeys(target){
-                return Object.getOwnPropertyNames(contextCopy);
-            },
-            defineProperty(target, name, propertyDescriptor){
-                return Object.defineProperty(contextCopy,name,propertyDescriptor);
-            },
-            deleteProperty(target, name){
-                return delete contextCopy[name];
-            },
-            preventExtensions(target){
-                return Object.preventExtensions(contextCopy);
-            },
-            has(target, name){
-                return name in contextCopy;
-            }
-        });
-
-         */
         let result = undefined;
         let f = null;
         try {

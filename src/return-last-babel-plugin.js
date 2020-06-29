@@ -128,7 +128,6 @@ function maybeInjectReturn(node, { key, ...options } = {}) {
         }
         return node;
     }
-    console.log({type:node.type});
     // ### Traversal of individual statements
     switch (node.type) {
         // Main goal is to process expressions to return them

@@ -255,7 +255,7 @@ export function handleLabeledStatement (babel, path, opts) {
                 return;
             }
             let targetNode = statement.get ('expression').node;
-            console.log(`ExpressionStatement:${targetNode.type}`);
+            //console.log(`ExpressionStatement:${targetNode.type}`);
             if(targetNode.type==='SequenceExpression'){
                 let properties = _.chain(targetNode.expressions).map((expressionNode) => {
                     if(['Identifier','ThisExpression'].indexOf(expressionNode.type)>-1){
@@ -301,10 +301,22 @@ export function handleLabeledStatement (babel, path, opts) {
 const wrapVmRunner = template (`
 var VM_RUNNER_RUN_ID = '';
 
+function generateUid(){
+    var u='',i=0; var four = 4;
+    var pattern = 'xxxxxxxx-xxxx-'+four+'xxx-yxxx-xxxxxxxxxxxx';
+    while(i++<36) {
+        var c=pattern[i-1],
+        r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);
+        u+=(c=='-'||c==four)?c:v.toString(16)
+    }
+    return u;
+} 
+
 if( typeof(vm2Options)==='undefined' ){
   vm2Options = {};
 }
 var VM_RUNNER_HASH = vm2Options.VM_RUNNER_HASH;
+
 var customOptions = vm2Options.customOptions || {};
 var traceOptions = customOptions.trace||{};
 
@@ -315,25 +327,15 @@ var VM_RUNNER_TRACE = function(logLevel,prefix,data){
     }
 };
 
+
+
 return (function vmRunnerWrapper() {
-    VM_RUNNER_RUN_ID = ( function () {
-        var u='',i=0; var four = 4;
-        var pattern = 'xxxxxxxx-xxxx-'+four+'xxx-yxxx-xxxxxxxxxxxx';
-        while(i++<36) {
-            var c=pattern[i-1],
-            r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);
-            u+=(c=='-'||c==four)?c:v.toString(16)
-        }
-        return u;
-    })();
+    VM_RUNNER_RUN_ID = generateUid();
     
     BODY;
 }).apply(this);
 `);
 
-/**
- * # Trace
- */
 export default function (babel) {
     return {
         visitor: {
@@ -350,7 +352,7 @@ export default function (babel) {
                         BODY: program.node.body,
                         VM_RUNNER_RUN_ID:babel.types.identifier ('VM_RUNNER_RUN_ID'),
                         VM_RUNNER_HASH:babel.types.identifier ('VM_RUNNER_HASH'),
-                        VM_RUNNER_TRACE:babel.types.identifier ('VM_RUNNER_HASH'),
+                        VM_RUNNER_TRACE:babel.types.identifier ('VM_RUNNER_TRACE'),
                     });
 
                     program.replaceWith (
