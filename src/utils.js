@@ -64,10 +64,11 @@ const functionFromScript = function(expr,vmCtx,options={}){
                 ["@babel/plugin-proposal-optional-chaining"],
                 ["@babel/plugin-proposal-decorators", {"legacy": true}],
             ],
-            "sourceMaps": false,
+            "sourceMaps": 'inline',
             "retainLines": true
         });
         console.log(code);
+        //console.log(map);
         vmCtx.vm2Options.functionBody = code;
         let f = functionGenerator.runInContext ( vmCtx );
         fbCache.set (key, f, 5 * 60 * 1000);
