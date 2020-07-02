@@ -51,10 +51,12 @@ export function getLogFunction ({types: t, template}, logLevel) {
                 [t.stringLiteral (prefix)].concat (message.content.expressions)
             );
         } else {
-            return expression (`VM_RUNNER_TRACE(LOGLEVEL,PREFIX, DATA)`, template) ({
+            const LINE = metadata.path.node.loc.start.line;
+            return expression (`VM_RUNNER_TRACE.apply({line:LINE},[LOGLEVEL,PREFIX, DATA])`, template) ({
                 LOGLEVEL: t.stringLiteral (logLevel),
                 PREFIX: t.stringLiteral (prefix),
                 DATA: message.content,
+                LINE:t.numericLiteral(LINE),
                 VM_RUNNER_TRACE:t.identifier ('VM_RUNNER_TRACE')
             });
         }
@@ -168,7 +170,7 @@ function collectMetadata (path, opts) {
     }
 
     const context = `${prefix}:${parentName}`;
-    return {indent, prefix, parentName, context, hasStartMessage, isStartMessage, filename, dirname, basename, extname};
+    return {indent, prefix, parentName, context, hasStartMessage, isStartMessage, filename, dirname, basename, extname, path};
 }
 
 /**
@@ -321,9 +323,17 @@ var customOptions = vm2Options.customOptions || {};
 var traceOptions = customOptions.trace||{};
 
 var VM_RUNNER_TRACE = function(logLevel,prefix,data){
-    let alias = traceOptions && traceOptions.aliases && traceOptions.aliases[logLevel] ;
+    var alias = traceOptions && traceOptions.aliases && traceOptions.aliases[logLevel] ;
+    var expression = (typeof vm2Options )!=='undefined' ? vm2Options.expression : null;
+    var message = {
+        frame:vmCodeFrame(expression,this.line),
+        prefix:prefix,
+        logLevel:logLevel,
+        data:data,
+        line:this.line        
+    }
     if( alias ){
-        return alias.apply(this,[prefix,data]);
+        return alias.apply(this,[message]);
     }
 };
 

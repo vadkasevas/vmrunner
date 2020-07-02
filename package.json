@@ -18,6 +18,7 @@
     "@babel/parser": "^7.9.6",
     "@babel/plugin-proposal-decorators": "^7.8.3",
     "@babel/template": "^7.8.6",
+    "babel-plugin-transform-line": "^0.8.0",
     "babel-preset-node8": "^1.2.0",
     "ejson": "^2.2.0",
     "escodegen": "^1.12.0",

@@ -1,9 +1,10 @@
+import vmBabelPlugin from "./babel-plugin";
+
 const breakpointPlugin = require('./breakpoint-plugin');
 const {parse, transform, traverse} = require("@babel/core");
 
 
-const source =  `
-
+const source =  `console.log(__line);
 class TestClass{
     stat(){
         var self = this;
@@ -25,7 +26,8 @@ const transformed = transform(source, {
     configFile: false,
     //debug:true,
     plugins: [
-        [breakpointPlugin],
+        [vmBabelPlugin],
+        ['babel-plugin-transform-line'],
     ],
     parserOpts: { allowReturnOutsideFunction: true }
 });

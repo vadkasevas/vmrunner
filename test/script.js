@@ -1,6 +1,6 @@
 const babelCore = require("@babel/core")
 
-var expr = `let BaseMenuContext = this.BaseMenuContext;`;
+var expr = `let BaseMenuContext = this.BaseMenuContext; //__line`;
 
 const { code, map, ast } = babelCore.transformSync(expr, {
     //sourceType:'script',
@@ -9,6 +9,7 @@ const { code, map, ast } = babelCore.transformSync(expr, {
         modules: false
     }]],
     "plugins": [
+        ['babel-plugin-transform-line'],
         "@babel/plugin-transform-runtime",
         ["@babel/plugin-syntax-dynamic-import"],
         ["@babel/plugin-proposal-optional-chaining"],

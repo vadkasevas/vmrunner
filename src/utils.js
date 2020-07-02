@@ -23,6 +23,7 @@ function generateRandomHash() {
 }
 
 const functionFromScript = function(expr,vmCtx,options={}){
+    let originalExpr = expr;
     vmCtx.vm2Options = vmCtx.vm2Options || {};
     let vm2OptionsHash = md5(JSON.stringify(options));
     vmCtx.vm2Options.customOptions = options;
@@ -57,6 +58,7 @@ const functionFromScript = function(expr,vmCtx,options={}){
             configFile: false,
             "presets": [["@babel/preset-env",{targets:{node:true,esmodules:false}}]],
             "plugins": [
+                ['babel-plugin-transform-line'],
                 [vmBabelPlugin],
                 [returnLastBabelPlugin,{ topLevel: true }],
                 "@babel/plugin-transform-runtime",
@@ -69,6 +71,7 @@ const functionFromScript = function(expr,vmCtx,options={}){
         });
         console.log(code);
         //console.log(map);
+        vmCtx.vm2Options.expression = originalExpr;
         vmCtx.vm2Options.functionBody = code;
         let f = functionGenerator.runInContext ( vmCtx );
         fbCache.set (key, f, 5 * 60 * 1000);
