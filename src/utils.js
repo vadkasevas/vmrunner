@@ -69,7 +69,7 @@ const functionFromScript = function(expr,vmCtx,options={}){
             "sourceMaps": 'inline',
             "retainLines": true
         });
-        console.log(code);
+        //console.log(code);
         //console.log(map);
         vmCtx.vm2Options.expression = originalExpr;
         vmCtx.vm2Options.functionBody = code;

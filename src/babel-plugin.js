@@ -38,10 +38,13 @@ function expression (input, template) {
  */
 export function getLogFunction ({types: t, template}, logLevel) {
     return function log (message, metadata) {
+        let messageExpression = message.messageExpression;
         let prefix = `${metadata.context}:`;
         if (metadata.indent) {
             prefix += (new Array (metadata.indent + 1)).join ('  ');
         }
+
+
         if (t.isSequenceExpression (message.content)) {
             return t.callExpression (
                 t.memberExpression (
@@ -52,48 +55,16 @@ export function getLogFunction ({types: t, template}, logLevel) {
             );
         } else {
             const LINE = metadata.path.node.loc.start.line;
-            return expression (`VM_RUNNER_TRACE.apply({line:LINE},[LOGLEVEL,PREFIX, DATA])`, template) ({
+            return expression (`VM_RUNNER_TRACE.apply({line:LINE},[LOGLEVEL, PREFIX, MESSAGE,  DATA])`, template) ({
                 LOGLEVEL: t.stringLiteral (logLevel),
                 PREFIX: t.stringLiteral (prefix),
                 DATA: message.content,
                 LINE:t.numericLiteral(LINE),
-                VM_RUNNER_TRACE:t.identifier ('VM_RUNNER_TRACE')
+                VM_RUNNER_TRACE:t.identifier ('VM_RUNNER_TRACE'),
+                MESSAGE:messageExpression
             });
         }
     }
-}
-
-/**
- * Normalize the plugin options.
- */
-function normalizeOpts (babel, opts) {
-    if (opts[$normalized]) {
-        return opts;
-    }
-    if (!opts.aliases) {
-        const log = getLogFunction (babel, 'log');
-        opts.aliases = {
-            log: getLogFunction (babel, 'log'),
-            trace: getLogFunction (babel, 'trace'),
-            warn: getLogFunction (babel, 'warn')
-        };
-    } else {
-        Object.keys (opts.aliases).forEach (key => {
-            if (typeof opts.aliases[key] === 'string' && opts.aliases[key]) {
-                const expr = expression (opts.aliases[key], babel.template);
-                opts.aliases[key] = (message) => expr (message);
-            }
-        });
-    }
-    if (opts.strip === undefined) {
-        opts.strip = {
-            log: {production: true},
-            trace: false,
-            warn: {production: true}
-        };
-    }
-    opts[$normalized] = true;
-    return opts;
 }
 
 function generatePrefix (dirname, basename) {
@@ -208,7 +179,34 @@ function shouldStrip (name, metadata, {strip}) {
 export function handleLabeledStatement (babel, path, opts) {
     const t = babel.types;
     const label = path.get ('label');
-    opts = normalizeOpts (babel, opts);
+    opts = (function normalizeOpts (babel, opts) {
+        if (opts[$normalized]) {
+            return opts;
+        }
+        if (!opts.aliases) {
+            opts.aliases = {
+                log: getLogFunction (babel, 'log'),
+                trace: getLogFunction (babel, 'trace'),
+                warn: getLogFunction (babel, 'warn')
+            };
+        } else {
+            Object.keys (opts.aliases).forEach (key => {
+                if (typeof opts.aliases[key] === 'string' && opts.aliases[key]) {
+                    const expr = expression (opts.aliases[key], babel.template);
+                    opts.aliases[key] = (message) => expr (message);
+                }
+            });
+        }
+        if (opts.strip === undefined) {
+            opts.strip = {
+                log: {production: true},
+                trace: false,
+                warn: {production: true}
+            };
+        }
+        opts[$normalized] = true;
+        return opts;
+    })(babel, opts);
 
     const labelName = label.node.name;
     const variables =  [];
@@ -249,6 +247,9 @@ export function handleLabeledStatement (babel, path, opts) {
             replacement[$handled] = true;
             emptyStatement.replaceWith (replacement);
         },
+        /*"TemplateLiteral|StringLiteral"(item){
+
+        },*/
         "VariableDeclaration|Function|AssignmentExpression|UpdateExpression|YieldExpression|ReturnStatement" (item) {
             throw path.buildCodeFrameError (`Logging statements cannot have side effects. ${item.type}`);
         },
@@ -257,7 +258,7 @@ export function handleLabeledStatement (babel, path, opts) {
                 return;
             }
             let targetNode = statement.get ('expression').node;
-            //console.log(`ExpressionStatement:${targetNode.type}`);
+            const messageElements = [];
             if(targetNode.type==='SequenceExpression'){
                 let properties = _.chain(targetNode.expressions).map((expressionNode) => {
                     if(['Identifier','ThisExpression'].indexOf(expressionNode.type)>-1){
@@ -270,11 +271,54 @@ export function handleLabeledStatement (babel, path, opts) {
                             value = t.thisExpression();
                         }
                         return t.objectProperty (key, value, false);
+                    }else if(['StringLiteral','TemplateLiteral'].indexOf(expressionNode.type)>-1){
+                        messageElements.push(expressionNode);
                     }
                 }).compact().value();
+                if( _.isEmpty(properties) && !_.isEmpty(messageElements) ){
+                    let properties = _.map (variables, (varName) => {
+                        let key = t.Identifier (varName);
+                        let value;
+                        if(varName!='this') {
+                            value = t.Identifier (varName);
+                        }else{
+                            value = t.thisExpression();
+                        }
+                        return t.objectProperty (key, value, false);
+                    });
+                    targetNode = t.objectExpression (properties);
+                }
+                else
+                    targetNode = t.objectExpression (properties);
+            }else if(['TemplateLiteral','StringLiteral'].indexOf(targetNode.type)>-1){
+                messageElements.push(targetNode);
+
+                let properties = _.map (variables, (varName) => {
+                    let key = t.Identifier (varName);
+                    let value;
+                    if(varName!='this') {
+                        value = t.Identifier (varName);
+                    }else{
+                        value = t.thisExpression();
+                    }
+                    return t.objectProperty (key, value, false);
+                });
                 targetNode = t.objectExpression (properties);
             }
+
+
+            const messageExpression = t.callExpression(
+                t.memberExpression(
+                    t.arrayExpression(messageElements),//object
+                    t.identifier('join'),//property
+                    false//computed
+                )
+                , [
+                    t.stringLiteral(' ')
+                ]);
+
             const message = {
+                messageExpression,
                 prefix: t.stringLiteral (metadata.prefix),
                 content: targetNode,
                 hasStartMessage: t.booleanLiteral (metadata.hasStartMessage),
@@ -322,18 +366,19 @@ var VM_RUNNER_HASH = vm2Options.VM_RUNNER_HASH;
 var customOptions = vm2Options.customOptions || {};
 var traceOptions = customOptions.trace||{};
 
-var VM_RUNNER_TRACE = function(logLevel,prefix,data){
+var VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
     var alias = traceOptions && traceOptions.aliases && traceOptions.aliases[logLevel] ;
     var expression = (typeof vm2Options )!=='undefined' ? vm2Options.expression : null;
-    var message = {
+    var messageObj = {
         frame:vmCodeFrame(expression,this.line),
         prefix:prefix,
+        message:message,
         logLevel:logLevel,
         data:data,
         line:this.line        
     }
     if( alias ){
-        return alias.apply(this,[message]);
+        return alias.apply(this,[messageObj]);
     }
 };
 

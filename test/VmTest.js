@@ -22,7 +22,7 @@ const itAsync = function (name, handler) {
 };
 
 describe ('VMRunner', () => {
-
+/*
         itAsync('Результат кода должен быть верным',async (done)=>{
 
             let context = new VMRunnerContext()
@@ -219,6 +219,7 @@ describe ('VMRunner', () => {
                 return '';
             }
         });
+
         let runner = new VMRunner (context).withThrow (true);
         let tracePrefix = null;
         let traceData = null;
@@ -249,6 +250,42 @@ describe ('VMRunner', () => {
 
         obj1.VM_RUNNER_RUN_ID.should.not.be.eql (obj2.VM_RUNNER_RUN_ID, 'VM_RUNNER_RUN_ID должен меняться при каждом вызове');
         obj1.VM_RUNNER_HASH.should.be.eql (obj2.VM_RUNNER_HASH, 'VM_RUNNER_HASH не должен меняться при каждом вызове');
+
+
+    });
+*/
+    it('Trace messages',async ()=>{
+        const expr = `
+            var s=1;
+            var message = 'SOME MESSAGE';
+            trace:\`message is:\${message}\`,'ok'
+        `;
+        let context = new VMRunnerContext ()
+        .withScopeObj ({
+            vmCodeFrame: function vmCodeFrame (expression,line) {
+                var codeFrameColumns = require ('@babel/code-frame').codeFrameColumns;
+                if (expression) {
+                    var location = {start: {line: line, column: null}};
+                    var result = codeFrameColumns (expression, location, {linesAbove: 5});
+                    return result;
+                }
+                return '';
+            }
+        });
+        let runner = new VMRunner (context).withThrow (true);
+
+
+        let obj2 = await runner.run (expr, {}, {
+            trace: {
+                aliases: {
+                    trace (message) {
+                        console.log(JSON.stringify(message));
+                    }
+                }
+            }
+        });
+
+
     })
 
 
