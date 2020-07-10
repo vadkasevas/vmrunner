@@ -259,6 +259,7 @@ describe ('VMRunner', () => {
             var s=1;
             var message = 'SOME MESSAGE';
             trace:\`message is:\${message}\`,'ok'
+            debug:'debugMessage'
         `;
         let context = new VMRunnerContext ()
         .withScopeObj ({
@@ -275,15 +276,26 @@ describe ('VMRunner', () => {
         let runner = new VMRunner (context).withThrow (true);
 
 
+        let traceMessage = null;
+        let debugMessage = null;
+
         let obj2 = await runner.run (expr, {}, {
             trace: {
                 aliases: {
                     trace (message) {
-                        console.log(JSON.stringify(message));
+                        traceMessage = message.message;
+                    },
+                    debug(message){
+                        debugMessage = message.message;
                     }
                 }
             }
         });
+
+        traceMessage.should.be.eql (`message is:SOME MESSAGE ok`, 'Сообщение trace');
+        debugMessage.should.be.eql (`debugMessage`, 'Сообщение debug');
+
+
 
 
     })

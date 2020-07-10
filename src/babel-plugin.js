@@ -187,7 +187,9 @@ export function handleLabeledStatement (babel, path, opts) {
             opts.aliases = {
                 log: getLogFunction (babel, 'log'),
                 trace: getLogFunction (babel, 'trace'),
-                warn: getLogFunction (babel, 'warn')
+                warn: getLogFunction (babel, 'warn'),
+                error:getLogFunction(babel,'error'),
+                debug:getLogFunction(babel,'debug')
             };
         } else {
             Object.keys (opts.aliases).forEach (key => {
@@ -379,7 +381,11 @@ var VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
         date:new Date()
     }
     if( alias ){
-        return alias.apply(this,[messageObj]);
+        try{
+            return alias.apply(this,[messageObj]);
+        }catch(e){
+            console.error(e);
+        }
     }
 };
 
