@@ -375,7 +375,8 @@ var VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
         message:message,
         logLevel:logLevel,
         data:data,
-        line:this.line        
+        line:this.line,
+        date:new Date()
     }
     if( alias ){
         return alias.apply(this,[messageObj]);
