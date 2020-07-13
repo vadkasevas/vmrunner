@@ -6,6 +6,7 @@ const before = require ('mocha').before;
 const it = require ('mocha').it;
 const babelCore = require ("@babel/core")
 const babelParser = require ("@babel/parser");
+const _ = require('underscore');
 
 const itAsync = function (name, handler) {
     it (name, function (done) {
@@ -20,6 +21,16 @@ const itAsync = function (name, handler) {
         }).apply (this);
     });
 };
+
+function vmCodeFrame (expression,line) {
+    var codeFrameColumns = require ('@babel/code-frame').codeFrameColumns;
+    if (expression) {
+        var location = {start: {line: line, column: null}};
+        var result = codeFrameColumns (expression, location, {linesAbove: 5});
+        return result;
+    }
+    return '';
+}
 
 describe ('VMRunner', () => {
 /*
@@ -253,7 +264,7 @@ describe ('VMRunner', () => {
 
 
     });
-*/
+
     it('Trace messages',async ()=>{
         const expr = `
             var s=1;
@@ -299,6 +310,109 @@ describe ('VMRunner', () => {
 
 
     })
+*/
+
+    itAsync('vm2OPtions',async ()=>{
+
+        let context = new VMRunnerContext()
+        .withScopeObj({
+            Object,
+            //Function,
+            Array,
+            Number,
+            parseFloat,
+            parseInt,
+            'Infinity':  Infinity ,
+            'NaN':  NaN ,
+            'undefined': void 0,
+            'Boolean': Boolean ,
+            'String':  String ,
+            'Symbol': Symbol,
+            'Date':Date ,
+            'RegExp': RegExp,
+            'Error': Error,
+            'EvalError': EvalError,
+            'RangeError': RangeError,
+            'ReferenceError': ReferenceError,
+            'SyntaxError': SyntaxError,
+            'TypeError': TypeError,
+            'URIError': URIError,
+            'JSON': JSON,
+            'Math':Math,
+            'console': console,
+            'Intl': Intl,
+            'ArrayBuffer': ArrayBuffer ,
+            'Uint8Array':Uint8Array,
+            'Int8Array': Int8Array,
+            'Uint16Array': Uint16Array,
+            'Int16Array': Int16Array,
+            'Uint32Array': Uint32Array,
+            'Int32Array': Int32Array,
+            'Float32Array': Float32Array,
+            'Float64Array':Float64Array,
+            'Uint8ClampedArray': Uint8ClampedArray,
+            'DataView': DataView,
+            'Map': Map,
+            'Set': Set,
+            'WeakMap': WeakMap,
+            'WeakSet': WeakSet,
+            'Proxy': Proxy,
+            'Reflect': Reflect,
+            'decodeURI': decodeURI,
+            'decodeURIComponent': decodeURIComponent,
+            'encodeURI': encodeURI,
+            'encodeURIComponent': encodeURIComponent,
+            'escape': escape,
+            'unescape': unescape,
+            'isFinite': isFinite,
+            'isNaN': isNaN,
+            'WebAssembly': WebAssembly,
+            'Buffer': Buffer,
+            'clearImmediate': clearImmediate,
+            'clearInterval': clearInterval,
+            'clearTimeout': clearTimeout,
+            'setImmediate': setImmediate,
+            'setInterval': setInterval,
+            'setTimeout': setTimeout,
+            Promise:Promise,
+            vmCodeFrame,
+            _
+        });
+        let runner = new VMRunner(context).withThrow(true)
+        let promises = [];
+        for(var i=0;i<500;i++){
+            let classExpression = `class `
+
+            let expression = `
+            //i${i}
+            var i = ${i};
+            trace:i,vm2Expression;
+
+            return new Promise((resolve,reject)=>{
+                if( vm2Expression.indexOf('//i${i}') ==-1){
+                    throw new Error(vm2Expression);
+                }
+                setTimeout( ()=>{
+                    resolve(true);
+                },_.random(0,100))
+            });
+            `;
+            let promise = runner.run(expression,{},{
+                trace:{
+                    aliases: {
+                        trace (message) {
+                            console.log(JSON.stringify( message.data) )
+                        }
+                    }
+                }
+            });
+            promises.push(promise);
+        }
+
+        let results = await Promise.all(promises);
+        console.log(JSON.stringify(results));
+
+    });
 
 
 });
