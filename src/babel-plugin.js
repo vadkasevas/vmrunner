@@ -364,15 +364,14 @@ if( typeof(vm2Options)==='undefined' ){
   vm2Options = {};
 }
 var VM_RUNNER_HASH = vm2Options.VM_RUNNER_HASH;
-
 var customOptions = vm2Options.customOptions || {};
 var traceOptions = customOptions.trace||{};
+var vm2Expression = vm2Options.expression || null;
 
 var VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
     var alias = traceOptions && traceOptions.aliases && traceOptions.aliases[logLevel] ;
-    var expression = (typeof vm2Options )!=='undefined' ? vm2Options.expression : null;
     var messageObj = {
-        frame:vmCodeFrame(expression,this.line),
+        frame:vmCodeFrame(vm2Expression,this.line),
         prefix:prefix,
         message:message,
         logLevel:logLevel,
