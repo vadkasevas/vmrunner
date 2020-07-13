@@ -347,7 +347,7 @@ export function handleLabeledStatement (babel, path, opts) {
     }
 }
 const wrapVmRunner = template (`
-var VM_RUNNER_RUN_ID = '';
+let VM_RUNNER_RUN_ID = '';
 
 function generateUid(){
     var u='',i=0; var four = 4;
@@ -363,12 +363,12 @@ function generateUid(){
 if( typeof(vm2Options)==='undefined' ){
   vm2Options = {};
 }
-var VM_RUNNER_HASH = vm2Options.VM_RUNNER_HASH;
-var customOptions = vm2Options.customOptions || {};
-var traceOptions = customOptions.trace||{};
-var vm2Expression = vm2Options.expression || null;
+let VM_RUNNER_HASH = vm2Options.VM_RUNNER_HASH;
+let customOptions = vm2Options.customOptions || {};
+let traceOptions = customOptions.trace||{};
+let vm2Expression = vm2Options.expression || null;
 
-var VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
+let VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
     var alias = traceOptions && traceOptions.aliases && traceOptions.aliases[logLevel] ;
     var messageObj = {
         frame:vmCodeFrame(vm2Expression,this.line),
