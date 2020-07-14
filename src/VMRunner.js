@@ -62,9 +62,9 @@ class VMRunner extends EventEmitter{
             return undefined;
         const scope = this.scope;
         let result = undefined;
-        let f = null;
+        let fData = null;
         try {
-            f = functionFromScript(expression,scope.vm,options);
+            fData = functionFromScript(expression,scope.vm,options);
         }catch (e) {
             if(this.listenerCount('error')>0){
                 this.emit('error',e,{
@@ -79,10 +79,10 @@ class VMRunner extends EventEmitter{
             }
             return result;
         }
-        if(!f)
+        if(!fData||!fData.f)
             return undefined;
         try{
-            result = await f.apply(context);
+            result = await fData.f.apply(context,[fData.vm2Options]);
         }catch(e){
             if(this.listenerCount('error')>0){
                 this.emit('error',e,{

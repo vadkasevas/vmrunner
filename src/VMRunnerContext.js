@@ -54,20 +54,20 @@ export default class VMRunnerContext{
      * @returns {Object} scope.original
      */
     getScope(runner){
-        if(this.scopeObj&&this.wrapScope) {
-            let hash = this.scopeObj[HASH_KEY];
-            if (!hash) {
-                hash = `${generateRandomHash()}:`;
-                try {
-                    Object.defineProperty(this.scopeObj, HASH_KEY, {
-                        configurable: false,
-                        enumerable: false,
-                        value: hash
-                    });
-                } catch (e) {
+        let hash = this.scopeObj[HASH_KEY];
+        if (!hash) {
+            hash = `${generateRandomHash()}:`;
+            try {
+                Object.defineProperty(this.scopeObj, HASH_KEY, {
+                    configurable: false,
+                    enumerable: false,
+                    value: hash
+                });
+            } catch (e) {
 
-                }
             }
+        }
+        if(this.scopeObj&&this.wrapScope) {
             if(this.scopeObj[HASH_KEY]&&this.scopeCacheTtl) {
                 if(!this.scopeCache.has(this.scopeObj[HASH_KEY])) {
                     this.scopeCache.set( this.scopeObj[HASH_KEY] , this.doWrapScope(this.scopeObj,runner),this.scopeCacheTtl );

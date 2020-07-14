@@ -9,8 +9,7 @@ const escodegen = require('escodegen');
 import MalibunCache from "./MalibunCache";
 import cachedRegExp from './cachedRegExp';
 
-const fbCache = new MalibunCache();
-const functionGenerator = new vm.Script( `new Function( vm2Options.functionBody );` );
+const functionGenerator = new vm.Script( `new Function( 'vm2Options', vm2Code );` );
 const scriptCache = new MalibunCache();
 const re = cachedRegExp(/^([\s\t\n\r]*return[\s\t\n\r]*)?(\{[\s\S]*\})([\s\t\n\r;]?$)/);
 const babelParser = require("@babel/parser");
@@ -21,18 +20,26 @@ import returnLastBabelPlugin from './return-last-babel-plugin';
 function generateRandomHash() {
     return md5(_.random(100000000) + '_' + _.random(100000000) + '_' + Date.now());
 }
+import NodeCache from 'node-cache';
+
+const fbCache = new NodeCache({
+    stdTTL:5*60,
+    checkperiod:Math.ceil(60),
+    useClones:false,
+    deleteOnExpire:true
+});
 
 const functionFromScript = function(expr,vmCtx,options={}){
     let originalExpr = expr;
-    vmCtx.vm2Options = vmCtx.vm2Options || {};
-    let vm2OptionsHash = md5(JSON.stringify(options));
-    vmCtx.vm2Options.customOptions = options;
+    let vm2Options = {};
+    let vm2OptionsHash = options.__vmRunnerHash?options.__vmRunnerHash:md5(JSON.stringify(options));
+    vm2Options.customOptions = options;
     const useCache = true;
 
-    let key = md5( expr+':'+vm2OptionsHash  );
-    vmCtx.vm2Options.VM_RUNNER_HASH = key;
-
-    if(!useCache||!fbCache.has(key)) {
+    let key = md5( expr+':'+vmCtx.__vmRunnerHash  );
+    vm2Options.VM_RUNNER_HASH = key;
+    vm2Options.expression = originalExpr;
+    if(!useCache||!fbCache.get(key)) {
         if(re.test(expr)){
             re.lastIndex = 0;
             expr = expr.replace(re,(m,prefix,body,suffix)=>{
@@ -66,17 +73,19 @@ const functionFromScript = function(expr,vmCtx,options={}){
                 ["@babel/plugin-proposal-optional-chaining"],
                 ["@babel/plugin-proposal-decorators", {"legacy": true}],
             ],
-            "sourceMaps": 'inline',
+            //"sourceMaps": 'inline',
             "retainLines": true
         });
         //console.log(code);
         //console.log(map);
-        vmCtx.vm2Options.expression = originalExpr;
-        vmCtx.vm2Options.functionBody = code;
+        vmCtx.vm2Code = code;
         let f = functionGenerator.runInContext ( vmCtx );
-        fbCache.set (key, f, 5 * 60 * 1000);
+        fbCache.set(key, f, 5 * 60);
     }
-    return fbCache.get(key);
+    return {
+        f:fbCache.get(key),
+        vm2Options:vm2Options
+    };
 };
 
 
