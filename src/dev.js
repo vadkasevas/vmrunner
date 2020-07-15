@@ -75,7 +75,10 @@ var f = async () => {
         vmCodeFrame,
         _
     });
-    let runner = new VMRunner (context).withThrow (true)
+    let runner = new VMRunner (context).withThrow (true);
+
+    let result = await runner.run(`'item2'`,{});
+
     let promises = [];
     for (var j = 0; j < 2000; j++) {
         let i = _.random (0, 10000);

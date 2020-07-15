@@ -402,6 +402,12 @@ export default function (babel) {
         visitor: {
             Program (program, {opts}) {
                 program.traverse ({
+                    DirectiveLiteral(path){
+                        if(_.isEmpty(program.node.body)){
+                            const returnStatement = babel.types.returnStatement(babel.types.stringLiteral(path.node.value))
+                            program.unshiftContainer('body', returnStatement);
+                        }
+                    },
                     LabeledStatement (path) {
                         handleLabeledStatement (babel, path, opts);
                     }

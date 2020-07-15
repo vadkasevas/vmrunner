@@ -48,6 +48,9 @@ describe ('VMRunner', () => {
                 result = await runner.run(`const a = 1; let b=1; return a+b;`,{});
                 should(result).equals(2,'Неверный результат');
 
+                result = await runner.run(`'item1'`,{});
+                should(result).equals('item1','Неверный результат');
+
                 result = await runner.run(`
                     let f = async function(){
                         return await new Promise((resolve,reject)=>{
