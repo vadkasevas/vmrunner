@@ -77,11 +77,27 @@ var f = async () => {
     });
     let runner = new VMRunner (context).withThrow (true);
 
-    let result = await runner.run(`'item2'`,{});
+    let result = await runner.run(`
+    class Test{
+        test(){
+            this.value();
+        }
+        
+        value(){
+            return 1;
+        }
+    }
+    
+    const test = new Test();
+    test.test();
+    
+    `,{});
+
+    console.log(result);
 
     let promises = [];
     for (var j = 0; j < 2000; j++) {
-        let i = _.random (0, 10000);
+        let i = _.random (0, 1000);
         ((i) => {
             let expression = `
                         //console.log('vm2Options:',_.size(vm2Options));

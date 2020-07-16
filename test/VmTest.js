@@ -62,6 +62,22 @@ describe ('VMRunner', () => {
                     return f();
                 `,{});
                 should(result).equals(1,'Должны поддерживаться все возможности es6');
+
+                result = await runner.run(`
+                class Test{
+                    test(){
+                        this.value();
+                    }
+                    
+                    value(){
+                        return 1;
+                    }
+                }
+                
+                const test = new Test();
+                test.test();
+                `);
+                (result === undefined).should.be.true('Не должно возвращаться последнее выражение функции');
             });
 
             itAsync('Переменные локального контекста доступны в коде',async ()=>{

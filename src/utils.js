@@ -58,7 +58,6 @@ const functionFromScript = function(expr,vmCtx,options={}){
             ],
             allowReturnOutsideFunction:true,
         });
-
         const { code, map, ast } = babelCore.transformFromAstSync(tokens, expr, {
             filename: options.filename||'vmrunner.js',
             babelrc: false,

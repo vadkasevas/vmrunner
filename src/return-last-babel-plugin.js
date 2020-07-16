@@ -13,6 +13,7 @@ export default function(babel) {
     const types = babel.types;
     return {
         visitor: {
+            /*
             Program(path,{opts}) {
                 if(opts.topLevel) {
                     maybeInjectReturn (path.node.body, {types, scope: path.scope});
@@ -24,9 +25,13 @@ export default function(babel) {
                 maybeInjectReturn(path.node.body, { types, scope: path.scope });
             },
             // Anonymous functions: `const a = function() {}`
+            */
             FunctionExpression(path) {
-                maybeInjectReturn(path.node.body, { types, scope: path.scope });
+                if(path.node.id && path.node.id.name =='vmRunnerWrapper'){
+                    maybeInjectReturn(path.node.body, { types, scope: path.scope });
+                }
             },
+            /*
             // Arrow functions: `() => {}`
             ArrowFunctionExpression(path) {
                 maybeInjectReturn(path.node.body, { types, scope: path.scope });
@@ -61,7 +66,7 @@ export default function(babel) {
                 maybeInjectReturn(path.node.body, { types, scope: path.scope });
             }
 
-
+*/
         }
     };
 };
@@ -327,3 +332,5 @@ function nodeDebugName(node) {
     }
     return (node && node.type) || node;
 }
+
+
