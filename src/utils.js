@@ -36,9 +36,18 @@ const functionFromScript = function(expr,vmCtx,options={}){
     vm2Options.customOptions = options;
     const useCache = true;
 
-    let key = md5( expr+':'+vmCtx.__vmRunnerHash  );
+    let keysArr = [
+        expr ,
+        vmCtx.__vmRunnerHash
+    ];
+    if(options.localScope&&!_.isEmpty(options.localScope)){
+        keysArr.push( _.keys(options.localScope).join(':') );
+        vm2Options.localScope = options.localScope;
+    }
+    let key = md5( keysArr.join(':') );
     vm2Options.VM_RUNNER_HASH = key;
     vm2Options.expression = originalExpr;
+
     if(!useCache||!fbCache.get(key)) {
         if(re.test(expr)){
             re.lastIndex = 0;
@@ -65,7 +74,7 @@ const functionFromScript = function(expr,vmCtx,options={}){
             "presets": [["@babel/preset-env",{targets:{node:true,esmodules:false}}]],
             "plugins": [
                 ['babel-plugin-transform-line'],
-                [vmBabelPlugin],
+                [vmBabelPlugin,{localScope:options.localScope}],
                 [returnLastBabelPlugin,{ topLevel: true }],
                 "@babel/plugin-transform-runtime",
                 ["@babel/plugin-syntax-dynamic-import"],

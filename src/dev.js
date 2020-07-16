@@ -77,23 +77,34 @@ var f = async () => {
     });
     let runner = new VMRunner (context).withThrow (true);
 
-    let result = await runner.run(`
-    class Test{
-        test(){
-            this.value();
+    let arr = [
+        await runner.run(`
+    return VM_RUNNER_HASH;    
+    `,{},{
+        localScope:{
+            test:1
         }
-        
-        value(){
-            return 1;
-        }
-    }
-    
-    const test = new Test();
-    test.test();
-    
-    `,{});
+    }),
 
-    console.log(result);
+        await runner.run(`
+    return VM_RUNNER_HASH;    
+    `,{},{
+            localScope:{
+                test:1
+            }
+        }),
+
+        await runner.run(`
+    return VM_RUNNER_HASH;    
+    `,{},{
+            localScope:{
+                test2:2
+            }
+        }),
+
+        ];
+
+    console.log(arr);
 
     let promises = [];
     for (var j = 0; j < 2000; j++) {

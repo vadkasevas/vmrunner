@@ -2,6 +2,8 @@ import fspath from "path";
 import _ from 'underscore';
 import template from "@babel/template";
 import {get} from 'lodash';
+import NodeCache from 'node-cache';
+import md5 from 'md5';
 
 const $handled = Symbol ('handled');
 const $normalized = Symbol ('normalized');
@@ -9,6 +11,84 @@ const $normalized = Symbol ('normalized');
 const PRESERVE_CONTEXTS = normalizeEnv (process.env.TRACE_CONTEXT);
 const PRESERVE_FILES = normalizeEnv (process.env.TRACE_FILE);
 const PRESERVE_LEVELS = normalizeEnv (process.env.TRACE_LEVEL);
+
+const templateCache = new NodeCache({
+    stdTTL:30*60,
+    checkperiod:Math.ceil(60),
+    useClones:false,
+    deleteOnExpire:true
+});
+
+/**
+ * @name BabelPluginOptions
+ * @property {Object} localScope
+ * */
+
+/**@param {BabelPluginOptions} opts*/
+function getTemplate(opts){
+    let key = 'default';
+    if(!_.isEmpty(opts.localScope)){
+        key = md5( _.keys(opts.localScope).join(':') );
+    }
+    if(!templateCache.get(key)){
+        let localScopeLine = '';
+        if(!_.isEmpty(opts.localScope)){
+            let keys = _.keys(opts.localScope);
+            localScopeLine = `let {${keys.join(',')}} = vm2Options.localScope;`
+        }
+        let babelTemplate = template (`
+let VM_RUNNER_RUN_ID = '';
+function generateUid(){
+    var u='',i=0; var four = 4;
+    var pattern = 'xxxxxxxx-xxxx-'+four+'xxx-yxxx-xxxxxxxxxxxx';
+    while(i++<36) {
+        var c=pattern[i-1],
+        r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);
+        u+=(c=='-'||c==four)?c:v.toString(16)
+    }
+    return u;
+} 
+
+if( typeof(vm2Options)==='undefined' ){
+  vm2Options = {};
+}
+${localScopeLine}
+let VM_RUNNER_HASH = vm2Options.VM_RUNNER_HASH;
+let customOptions = vm2Options.customOptions || {};
+let traceOptions = customOptions.trace||{};
+let vm2Expression = vm2Options.expression || null;
+
+let VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
+    var alias = traceOptions && traceOptions.aliases && traceOptions.aliases[logLevel] ;
+    var messageObj = {
+        frame:vmCodeFrame(vm2Expression,this.line),
+        prefix:prefix,
+        message:message,
+        logLevel:logLevel,
+        data:data,
+        line:this.line,
+        date:new Date()
+    }
+    if( alias ){
+        try{
+            return alias.apply(this,[messageObj]);
+        }catch(e){
+            console.error(e);
+        }
+    }
+};
+
+return (function vmRunnerWrapper() {
+    VM_RUNNER_RUN_ID = generateUid();
+    
+    BODY;
+}).apply(this);
+`);
+        templateCache.set(key,babelTemplate);
+    }
+    return templateCache.get(key);
+
+}
 
 /**
  * Normalize an environment variable, used to override plugin options.
@@ -346,56 +426,6 @@ export function handleLabeledStatement (babel, path, opts) {
         }
     }
 }
-const wrapVmRunner = template (`
-let VM_RUNNER_RUN_ID = '';
-
-function generateUid(){
-    var u='',i=0; var four = 4;
-    var pattern = 'xxxxxxxx-xxxx-'+four+'xxx-yxxx-xxxxxxxxxxxx';
-    while(i++<36) {
-        var c=pattern[i-1],
-        r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);
-        u+=(c=='-'||c==four)?c:v.toString(16)
-    }
-    return u;
-} 
-
-if( typeof(vm2Options)==='undefined' ){
-  vm2Options = {};
-}
-let VM_RUNNER_HASH = vm2Options.VM_RUNNER_HASH;
-let customOptions = vm2Options.customOptions || {};
-let traceOptions = customOptions.trace||{};
-let vm2Expression = vm2Options.expression || null;
-vm2Expression = String(vm2Expression);
-
-
-let VM_RUNNER_TRACE = function(logLevel,prefix,message,data){
-    var alias = traceOptions && traceOptions.aliases && traceOptions.aliases[logLevel] ;
-    var messageObj = {
-        frame:vmCodeFrame(vm2Expression,this.line),
-        prefix:prefix,
-        message:message,
-        logLevel:logLevel,
-        data:data,
-        line:this.line,
-        date:new Date()
-    }
-    if( alias ){
-        try{
-            return alias.apply(this,[messageObj]);
-        }catch(e){
-            console.error(e);
-        }
-    }
-};
-
-return (function vmRunnerWrapper() {
-    VM_RUNNER_RUN_ID = generateUid();
-    
-    BODY;
-}).apply(this);
-`);
 
 export default function (babel) {
     return {
@@ -415,6 +445,7 @@ export default function (babel) {
 
                 if (!program.vmRunnerWrapper) {
                     program.vmRunnerWrapper = true;
+                    const wrapVmRunner = getTemplate(opts);
                     var wrapped = wrapVmRunner ({
                         BODY: program.node.body,
                         VM_RUNNER_RUN_ID:babel.types.identifier ('VM_RUNNER_RUN_ID'),

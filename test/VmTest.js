@@ -330,6 +330,40 @@ describe ('VMRunner', () => {
 
         });
 
+        itAsync('localScope',async ()=>{
+            let context = new VMRunnerContext ()
+            .withScopeObj({});
+            let runner = new VMRunner (context).withThrow (true);
+
+            let result = await runner.run('return test;',{},{
+                localScope:{
+                    test:1
+                }
+            });
+            should(result).equals(1,'localScope должен быть доступен в коде');
+
+            let results = [
+                await runner.run(`return VM_RUNNER_HASH;`,{},{
+                    localScope:{
+                        test:1
+                    }
+                }),
+                await runner.run(`return VM_RUNNER_HASH;`,{},{
+                    localScope:{
+                        test:1
+                    }
+                }),
+                await runner.run(`return VM_RUNNER_HASH;`,{},{
+                    localScope:{
+                        test2:1
+                    }
+                }),
+            ];
+
+            results[0].should.be.eql (results[1], 'VM_RUNNER_HASH не должен меняться при идентичных localScope keys');
+            results[0].should.not.be.eql (results[2], 'VM_RUNNER_HASH должен меняться при различных localScope keys');
+
+        });
 
 
 
